@@ -67,7 +67,7 @@ internal class JobInitCommandService : ICommandService<JobInitCommand>
                 return;
             }
 
-            var gameProviderAgentMapper = new Dictionary<string, JobExecuteCommand>();
+            var gameProviderAgentMapper = new Dictionary<string, string>();
 
             foreach (var gameProviderConfig in gameProviderConfigs)
             {
@@ -94,6 +94,8 @@ internal class JobInitCommandService : ICommandService<JobInitCommand>
                     continue;
                 }
 
+                gameProviderAgentMapper.Add(website, website);
+
                 foreach (var reportType in Enum.GetValues(typeof(ReportTypes)).Cast<ReportTypes>())
                 {
                     var jobExecuteCommand = new JobExecuteCommand(
@@ -103,8 +105,6 @@ internal class JobInitCommandService : ICommandService<JobInitCommand>
                         Website: website,
                         Cert: cert,
                         ReportType: reportType);
-
-                    gameProviderAgentMapper.Add(website, jobExecuteCommand);
 
                     RecurringJob.AddOrUpdate<IHangfireUtensil>(
                         recurringJobId: $"{website}-{reportType}",
