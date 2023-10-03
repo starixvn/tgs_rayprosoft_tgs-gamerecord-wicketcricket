@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32414.318
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tgs.GameRecord.WicketCricket", "Tgs.GameRecord.WicketCricket\Tgs.GameRecord.WicketCricket.csproj", "{56700135-F59B-481C-977D-8FB17DCEA6B0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tgs.GameRecord.WicketCricket.Core", "Tgs.GameRecord.WicketCricket.Core\Tgs.GameRecord.WicketCricket.Core.csproj", "{D02D2F40-34A9-45E7-B808-CFEA0B94399D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tgs.GameRecord.WicketCricket.Core.UnitTest", "Tgs.GameRecord.WicketCricket.Core.UnitTest\Tgs.GameRecord.WicketCricket.Core.UnitTest.csproj", "{160BC1AC-F8C1-4BC5-BF42-27719B9CBB92}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{56700135-F59B-481C-977D-8FB17DCEA6B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56700135-F59B-481C-977D-8FB17DCEA6B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56700135-F59B-481C-977D-8FB17DCEA6B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56700135-F59B-481C-977D-8FB17DCEA6B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D02D2F40-34A9-45E7-B808-CFEA0B94399D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D02D2F40-34A9-45E7-B808-CFEA0B94399D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D02D2F40-34A9-45E7-B808-CFEA0B94399D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D02D2F40-34A9-45E7-B808-CFEA0B94399D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{160BC1AC-F8C1-4BC5-BF42-27719B9CBB92}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{160BC1AC-F8C1-4BC5-BF42-27719B9CBB92}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{160BC1AC-F8C1-4BC5-BF42-27719B9CBB92}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{160BC1AC-F8C1-4BC5-BF42-27719B9CBB92}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EF6218A9-E95A-40E4-BF61-8C1E24C390EC}
+	EndGlobalSection
+EndGlobal
