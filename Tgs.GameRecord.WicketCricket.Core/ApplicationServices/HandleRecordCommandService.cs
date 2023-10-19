@@ -35,7 +35,7 @@ internal class HandleRecordCommandService : ICommandService<HandleRecordCommand>
                 ? WagerStates.Void
                 : command.Info.IsCancelled
                 ? WagerStates.Refund
-                : command.Info.WinLoss > 0
+                : command.Info.WinLoss.ToDecimal().GetValueOrDefault(0) > 0
                 ? WagerStates.Win
                 : WagerStates.Lose;
             if (wagerState is WagerStates.Win or WagerStates.Lose)

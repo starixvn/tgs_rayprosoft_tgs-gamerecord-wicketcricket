@@ -20,5 +20,4 @@ public record WicketCricketViewModel
     public DateTimeOffset EndTime { get; init; }
     [Required]
     public ReportTypes ReportType { get; init; }
-
 }

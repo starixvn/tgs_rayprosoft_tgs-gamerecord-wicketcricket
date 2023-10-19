@@ -1,8 +1,5 @@
-﻿using System.Runtime.ConstrainedExecution;
-using System.Xml.Linq;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Pipelines.Sockets.Unofficial.Arenas;
 using Tgs.GameRounds.Schedule.Client;
 using Tgs.GameRounds.Schedule.Protos;
 using Tgs.ServiceUtility;

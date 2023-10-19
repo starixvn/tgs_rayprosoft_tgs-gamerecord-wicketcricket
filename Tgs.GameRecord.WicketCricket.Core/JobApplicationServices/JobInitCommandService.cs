@@ -107,7 +107,7 @@ internal class JobInitCommandService : ICommandService<JobInitCommand>
                         ReportType: reportType);
 
                     RecurringJob.AddOrUpdate<IHangfireUtensil>(
-                        recurringJobId: $"{website}-{reportType}",
+                        recurringJobId: $"{gameProviderConfig.Name}|{website}-{reportType}|{gameProviderConfig.GameProviderConfigId}",
                         methodCall: service => service.JobExecuteAsync(jobExecuteCommand),
                         cronExpression: Cron.Minutely(),
                         options: _recurringJobOptions);

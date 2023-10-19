@@ -13,8 +13,8 @@ internal class ScheduleFormDispatcher : IScheduleFormDispatcher
 {
     private readonly IGameRoundsScheduleClient _client;
     private readonly ILogger<ScheduleFormDispatcher> _logger;
-    private readonly ICommandService<PullRecordCommand> _service;
     private readonly IScheduleFormLock _scheduleFormLock;
+    private readonly ICommandService<PullRecordCommand> _service;
 
     public ScheduleFormDispatcher(
         ILogger<ScheduleFormDispatcher> logger,
@@ -71,7 +71,6 @@ internal class ScheduleFormDispatcher : IScheduleFormDispatcher
             var parameter = JsonSerializer.Deserialize<WicketCricketParameter>(scheduleForm.Parameters)
                 ?? throw new Exception($"This game provider ({gameProviderCode}) scheduling form parameter is null. ({id})");
 
-
             var command = new PullRecordCommand(
                 ApiUrl: new Uri(parameter.ApiUrl),
                 Website: parameter.Website,
@@ -87,7 +86,6 @@ internal class ScheduleFormDispatcher : IScheduleFormDispatcher
                     command: command,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
-
 
             await _client
                 .ScheduleFormCompleteAsync(

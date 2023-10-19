@@ -7,8 +7,8 @@ namespace Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
 
 internal class UnsettledCommandService : ICommandService<UnsettledCommand>
 {
-    private readonly ILogger<UnsettledCommandService> _logger;
     private readonly IGameInterfaceWicketCricketClient _client;
+    private readonly ILogger<UnsettledCommandService> _logger;
     private readonly ICommandService<HandleRecordCommand> _service;
 
     public UnsettledCommandService(

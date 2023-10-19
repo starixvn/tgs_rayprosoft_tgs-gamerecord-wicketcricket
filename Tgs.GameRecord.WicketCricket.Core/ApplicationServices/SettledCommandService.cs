@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using NATS.Client.Service;
+﻿using Microsoft.Extensions.Logging;
 using Tgs.GameInterface.WicketCricket.Client;
 using Tgs.GameInterface.WicketCricket.Protos;
 using Tgs.ServiceUtility;
@@ -13,8 +7,8 @@ namespace Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
 
 internal class SettledCommandService : ICommandService<SettledCommand>
 {
-    private readonly ILogger<SettledCommandService> _logger;
     private readonly IGameInterfaceWicketCricketClient _client;
+    private readonly ILogger<SettledCommandService> _logger;
     private readonly ICommandService<HandleRecordCommand> _service;
 
     public SettledCommandService(

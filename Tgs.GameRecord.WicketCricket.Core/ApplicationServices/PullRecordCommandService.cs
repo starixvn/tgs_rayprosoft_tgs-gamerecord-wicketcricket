@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.ConstrainedExecution;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Tgs.GameInterface.WicketCricket.Protos;
+﻿using Microsoft.Extensions.Logging;
 using Tgs.ServiceUtility;
 
 namespace Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
@@ -13,8 +6,8 @@ namespace Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
 internal class PullRecordCommandService : ICommandService<PullRecordCommand>
 {
     private readonly ILogger<PullRecordCommandService> _logger;
-    private readonly ICommandService<UnsettledCommand> _unsettledService;
     private readonly ICommandService<SettledCommand> _settledService;
+    private readonly ICommandService<UnsettledCommand> _unsettledService;
 
     public PullRecordCommandService(
         ILogger<PullRecordCommandService> logger,

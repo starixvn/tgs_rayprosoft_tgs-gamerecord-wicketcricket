@@ -16,7 +16,6 @@ public class PullRecordCommandServiceUnitTest
         var fakeUnsettledService = Substitute.For<ICommandService<UnsettledCommand>>();
         var fakeSettledService = Substitute.For<ICommandService<SettledCommand>>();
 
-
         var command = new PullRecordCommand(
             ApiUrl: new("http://localhost/"),
             Website: "Website",
@@ -25,14 +24,12 @@ public class PullRecordCommandServiceUnitTest
             EndTime: DateTimeOffset.UtcNow,
             ReportType: ReportTypes.Exchange);
 
-
         var service = new PullRecordCommandService(
             fakeLogger,
             fakeUnsettledService,
             fakeSettledService);
 
         await service.ExecuteAsync(command: command);
-
 
         _ = fakeUnsettledService
             .Received(1)
@@ -45,7 +42,6 @@ public class PullRecordCommandServiceUnitTest
                 ReportType: command.ReportType)),
             cancellationToken: Arg.Any<CancellationToken>());
 
-
         _ = fakeSettledService
             .Received(1)
             .ExecuteAsync(
@@ -57,6 +53,5 @@ public class PullRecordCommandServiceUnitTest
                 EndTime: command.EndTime,
                 ReportType: command.ReportType)),
             cancellationToken: Arg.Any<CancellationToken>());
-
     }
 }
