@@ -2,20 +2,19 @@
 kind: ConfigMap
 metadata:
   name: configmap-{{ include "game-gamerecord-wicketcricket.fullname" . }}
-  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "game-gamerecord-wicketcricket.labels" . | nindent 4 }}
 data:
   appsettings.json: |
     {
       "Logging": {
-         "LogLevel": {
-          "Default": "Warning"
-          }
+        "LogLevel": {
+          "Default": "Warning",
+          "Tgs.GameRecord.WicketCricket.Messages": "Information"
+        }
       },
       "GameRecord": {
         "GameCommandClientBaseUrl": "http://game-gamecommand/",
-        "GameRoundsScheduleClientBaseUrl": "http://game-gamerounds-schedule:9090/",
         "GameInterfaceClientBaseUrl": "dns:///game-gameinterface-wicketcricket:9090/"
       }
     }

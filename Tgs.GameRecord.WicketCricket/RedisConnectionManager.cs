@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Options;
-using StackExchange.Redis;
 
-namespace Tgs.GameRecord.WicketCricket.Core;
+using StackExchange.Redis;
+using Tgs.GameRecord.WicketCricket;
+
+namespace Tgs.GameRecord.WicketCricket;
 
 internal class RedisConnectionManager : IDisposable
 {
@@ -12,8 +14,7 @@ internal class RedisConnectionManager : IDisposable
 
     public RedisConnectionManager(IOptions<RedisOptions> optionsAccessor)
     {
-        if (optionsAccessor is null)
-            throw new ArgumentNullException(nameof(optionsAccessor));
+        ArgumentNullException.ThrowIfNull(optionsAccessor);
 
         var options = optionsAccessor.Value;
 

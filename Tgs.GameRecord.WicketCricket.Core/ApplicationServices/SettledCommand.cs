@@ -5,6 +5,7 @@ public record SettledCommand(
     Uri ApiUrl,
     string Website,
     string Cert,
+    string Agent,
+    ReportTypes ReportType,
     DateTimeOffset StartTime,
-    DateTimeOffset EndTime,
-    ReportTypes ReportType);
+    DateTimeOffset EndTime);

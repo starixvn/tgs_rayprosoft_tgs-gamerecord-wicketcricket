@@ -20,9 +20,10 @@ public class PullRecordCommandServiceUnitTest
             ApiUrl: new("http://localhost/"),
             Website: "Website",
             Cert: "Cert",
+            Agent: "agent",
+            ReportType: ReportTypes.Exchange,
             StartTime: DateTimeOffset.UtcNow.AddMinutes(-10),
-            EndTime: DateTimeOffset.UtcNow,
-            ReportType: ReportTypes.Exchange);
+            EndTime: DateTimeOffset.UtcNow);
 
         var service = new PullRecordCommandService(
             fakeLogger,
@@ -38,8 +39,9 @@ public class PullRecordCommandServiceUnitTest
                 ApiUrl: command.ApiUrl,
                 Website: command.Website,
                 Cert: command.Cert,
-                LastUpdateTime: command.StartTime,
-                ReportType: command.ReportType)),
+                Agent: command.Agent,
+                ReportType: command.ReportType,
+                LastUpdateTime: command.StartTime)),
             cancellationToken: Arg.Any<CancellationToken>());
 
         _ = fakeSettledService
@@ -49,9 +51,10 @@ public class PullRecordCommandServiceUnitTest
                 ApiUrl: command.ApiUrl,
                 Website: command.Website,
                 Cert: command.Cert,
+                Agent: command.Agent,
+                ReportType: command.ReportType,
                 StartTime: command.StartTime,
-                EndTime: command.EndTime,
-                ReportType: command.ReportType)),
+                EndTime: command.EndTime)),
             cancellationToken: Arg.Any<CancellationToken>());
     }
 }

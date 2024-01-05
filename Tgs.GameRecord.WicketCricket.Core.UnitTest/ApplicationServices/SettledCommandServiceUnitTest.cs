@@ -21,9 +21,10 @@ public class SettledCommandServiceUnitTest
             ApiUrl: new("http://localhost/"),
             Website: "Website",
             Cert: "Cert",
+            Agent: "agent",
+            ReportType: ReportTypes.Exchange,
             StartTime: DateTimeOffset.UtcNow.AddMinutes(-10),
-            EndTime: DateTimeOffset.UtcNow,
-            ReportType: ReportTypes.Exchange);
+            EndTime: DateTimeOffset.UtcNow);
 
         var service = new SettledCommandService(
             fakeLogger,

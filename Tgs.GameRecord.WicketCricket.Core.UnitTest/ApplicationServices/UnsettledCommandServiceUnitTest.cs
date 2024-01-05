@@ -21,8 +21,9 @@ public class UnsettledCommandServiceUnitTest
             ApiUrl: new("http://localhost/"),
             Website: "Website",
             Cert: "Cert",
-            LastUpdateTime: DateTimeOffset.UtcNow.AddMinutes(-10),
-            ReportType: ReportTypes.Exchange);
+            Agent: "agent",
+            ReportType: ReportTypes.Exchange,
+            LastUpdateTime: DateTimeOffset.UtcNow.AddMinutes(-10));
 
         var service = new UnsettledCommandService(
             fakeLogger,

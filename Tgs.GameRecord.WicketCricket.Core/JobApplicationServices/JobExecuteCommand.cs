@@ -8,4 +8,5 @@ public record JobExecuteCommand(
     Uri ApiUrl,
     string Website,
     string Cert,
+    string Agent,
     ReportTypes ReportType);

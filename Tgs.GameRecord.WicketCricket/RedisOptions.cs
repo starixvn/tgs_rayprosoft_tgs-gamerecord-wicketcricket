@@ -1,4 +1,4 @@
-﻿namespace Tgs.GameRecord.WicketCricket.Core;
+﻿namespace Tgs.GameRecord.WicketCricket;
 
 public record RedisOptions
 {

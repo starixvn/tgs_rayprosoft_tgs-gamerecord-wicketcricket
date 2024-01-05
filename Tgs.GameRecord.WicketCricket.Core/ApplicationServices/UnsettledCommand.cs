@@ -5,5 +5,6 @@ public record UnsettledCommand(
     Uri ApiUrl,
     string Website,
     string Cert,
-    DateTimeOffset LastUpdateTime,
-    ReportTypes ReportType);
+    string Agent,
+    ReportTypes ReportType,
+    DateTimeOffset LastUpdateTime);

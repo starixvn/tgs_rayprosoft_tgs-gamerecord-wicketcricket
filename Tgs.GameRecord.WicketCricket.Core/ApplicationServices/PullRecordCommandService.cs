@@ -3,22 +3,11 @@ using Tgs.ServiceUtility;
 
 namespace Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
 
-internal class PullRecordCommandService : ICommandService<PullRecordCommand>
+internal class PullRecordCommandService(
+    ILogger<PullRecordCommandService> logger,
+    ICommandService<UnsettledCommand> unsettledService,
+    ICommandService<SettledCommand> settledService) : ICommandService<PullRecordCommand>
 {
-    private readonly ILogger<PullRecordCommandService> _logger;
-    private readonly ICommandService<SettledCommand> _settledService;
-    private readonly ICommandService<UnsettledCommand> _unsettledService;
-
-    public PullRecordCommandService(
-        ILogger<PullRecordCommandService> logger,
-        ICommandService<UnsettledCommand> unsettledService,
-        ICommandService<SettledCommand> settledService)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _unsettledService = unsettledService ?? throw new ArgumentNullException(nameof(unsettledService));
-        _settledService = settledService ?? throw new ArgumentNullException(nameof(settledService));
-    }
-
     public async ValueTask ExecuteAsync(PullRecordCommand command, CancellationToken cancellationToken = default)
     {
         try
@@ -27,17 +16,18 @@ internal class PullRecordCommandService : ICommandService<PullRecordCommand>
                 ApiUrl: command.ApiUrl,
                 Website: command.Website,
                 Cert: command.Cert,
-                LastUpdateTime: command.StartTime,
-                ReportType: command.ReportType);
+                Agent: command.Agent,
+                ReportType: command.ReportType,
+                LastUpdateTime: command.StartTime);
 
-            await _unsettledService.ExecuteAsync(
+            await unsettledService.ExecuteAsync(
                 command: unsettledCommand,
                 cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "LogOn:{logOn} Message: Unsettled exception.({command})", DateTime.Now.ToString("o"), command);
+            logger.LogError(ex, "LogOn:{logOn} Message: Unsettled exception.({command})", DateTime.Now.ToString("o"), command);
         }
 
         try
@@ -46,18 +36,19 @@ internal class PullRecordCommandService : ICommandService<PullRecordCommand>
                 ApiUrl: command.ApiUrl,
                 Website: command.Website,
                 Cert: command.Cert,
+                Agent: command.Agent,
+                ReportType: command.ReportType,
                 StartTime: command.StartTime,
-                EndTime: command.EndTime,
-                ReportType: command.ReportType);
+                EndTime: command.EndTime);
 
-            await _settledService.ExecuteAsync(
+            await settledService.ExecuteAsync(
                 command: settledCommand,
                 cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "LogOn:{logOn} Message: Settled exception.({command})", DateTime.Now.ToString("o"), command);
+            logger.LogError(ex, "LogOn:{logOn} Message: Settled exception.({command})", DateTime.Now.ToString("o"), command);
         }
     }
 }

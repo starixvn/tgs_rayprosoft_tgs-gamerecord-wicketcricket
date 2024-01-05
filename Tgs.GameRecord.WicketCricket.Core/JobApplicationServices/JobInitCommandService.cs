@@ -11,41 +11,41 @@ using Tgs.ServiceUtility;
 
 namespace Tgs.GameRecord.WicketCricket.Core.JobApplicationServices;
 
-internal class JobInitCommandService : ICommandService<JobInitCommand>
+internal class JobInitCommandService(
+    ILogger<JobInitCommandService> logger,
+    IOptions<GameRecordInfoOptions> options,
+    IHangfireLock hangfireLock,
+    IGameCommandClient client) : ICommandService<JobInitCommand>
 {
-    private readonly IGameCommandClient _client;
-    private readonly GameRecordInfoOptions _gameRecordInfo;
-    private readonly ILogger<JobInitCommandService> _logger;
-    private readonly RecurringJobOptions _recurringJobOptions;
+    private readonly GameRecordInfoOptions _gameRecordInfo = options.Value;
 
-    public JobInitCommandService(
-        ILogger<JobInitCommandService> logger,
-        IOptions<GameRecordInfoOptions> options,
-        IGameCommandClient client)
+    private readonly RecurringJobOptions _recurringJobOptions = new()
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _gameRecordInfo = options.Value;
-        _client = client ?? throw new ArgumentNullException(nameof(client));
-        _recurringJobOptions = new RecurringJobOptions()
-        {
-            TimeZone = TimeZoneInfo.FindSystemTimeZoneById(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "China Standard Time" : "Asia/Shanghai")
-        };
-    }
+        TimeZone = TimeZoneInfo.FindSystemTimeZoneById(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "China Standard Time" : "Asia/Shanghai")
+    };
 
     public async ValueTask ExecuteAsync(JobInitCommand command, CancellationToken cancellationToken = default)
     {
-        using (var connection = JobStorage.Current.GetConnection())
-        {
-            foreach (var recurringJob in connection.GetRecurringJobs())
-            {
-                RecurringJob.RemoveIfExists(recurringJob.Id);
-            }
-        }
-
         try
         {
-            var settingConfiguration = await _client
-                .SettingGetConfigurationStringAsync(
+            if (!await hangfireLock.LockingAsync(
+                application: typeof(JobInitCommandService).Name,
+                cancellationToken: cancellationToken)
+                .ConfigureAwait(false))
+            {
+                logger.LogWarning("LogOn:{logOn} Message:進行初始化動作，已經有其他服務進行", DateTime.Now.ToString("o"));
+                return;
+            }
+
+            using (var connection = JobStorage.Current.GetConnection())
+            {
+                foreach (var recurringJob in connection.GetRecurringJobs())
+                {
+                    RecurringJob.RemoveIfExists(recurringJob.Id);
+                }
+            }
+
+            var settingConfiguration = await client.SettingGetConfigurationStringAsync(
                 key: _gameRecordInfo.GameProviderConfiguration,
                 cancellationToken: cancellationToken)
                 .ConfigureAwait(false)
@@ -54,8 +54,7 @@ internal class JobInitCommandService : ICommandService<JobInitCommand>
             var settingConfigurationJson = JsonNode.Parse(settingConfiguration)
                 ?? throw new Exception($"This game product setting does not exist.({_gameRecordInfo.GameProviderConfiguration})");
 
-            var gameProviderConfigs = await _client
-                .GameProviderConfigurationQueryAsync(
+            var gameProviderConfigs = await client.GameProviderConfigurationQueryAsync(
                 gameProviderCode: _gameRecordInfo.GameProviderCode,
                 cancellationToken: cancellationToken)
                 .ToArrayAsync(cancellationToken: cancellationToken)
@@ -83,10 +82,13 @@ internal class JobInitCommandService : ICommandService<JobInitCommand>
                     ?? settingConfigurationJson["ApiUrl"]?.ToString()
                     ?? throw new Exception($"Required parameters(ApiUrl)"));
                 var website = configurationDataJson["Website"]?.ToString()
+                    ?? settingConfigurationJson["Website"]?.ToString()
                     ?? throw new Exception($"Required parameters(Website)");
                 var cert = configurationDataJson["Cert"]?.ToString()
+                    ?? settingConfigurationJson["Cert"]?.ToString()
                     ?? throw new Exception($"Required parameters(Cert)");
                 var agent = configurationDataJson["Agent"]?.ToString()
+                    ?? settingConfigurationJson["Agent"]?.ToString()
                     ?? throw new Exception($"Required parameters(Agent)");
 
                 if (gameProviderAgentMapper.ContainsKey(website))
@@ -104,6 +106,7 @@ internal class JobInitCommandService : ICommandService<JobInitCommand>
                         ApiUrl: apiUrl,
                         Website: website,
                         Cert: cert,
+                        Agent: agent,
                         ReportType: reportType);
 
                     RecurringJob.AddOrUpdate<IHangfireUtensil>(
@@ -119,7 +122,7 @@ internal class JobInitCommandService : ICommandService<JobInitCommand>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "LogOn:{logOn} Message:遊戲廠商初始化排程發生例外", DateTime.Now.ToString("o"));
+            logger.LogError(ex, "LogOn:{logOn} Message:遊戲廠商初始化排程發生例外", DateTime.Now.ToString("o"));
         }
         finally
         {

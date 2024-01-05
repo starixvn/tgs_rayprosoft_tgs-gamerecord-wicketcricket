@@ -5,22 +5,11 @@ using Tgs.ServiceUtility;
 
 namespace Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
 
-internal class SettledCommandService : ICommandService<SettledCommand>
+internal class SettledCommandService(
+    ILogger<SettledCommandService> logger,
+    IGameInterfaceWicketCricketClient client,
+    ICommandService<HandleRecordCommand> service) : ICommandService<SettledCommand>
 {
-    private readonly IGameInterfaceWicketCricketClient _client;
-    private readonly ILogger<SettledCommandService> _logger;
-    private readonly ICommandService<HandleRecordCommand> _service;
-
-    public SettledCommandService(
-        ILogger<SettledCommandService> logger,
-        IGameInterfaceWicketCricketClient client,
-        ICommandService<HandleRecordCommand> service)
-    {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _client = client ?? throw new ArgumentNullException(nameof(client));
-        _service = service ?? throw new ArgumentNullException(nameof(service));
-    }
-
     public async ValueTask ExecuteAsync(SettledCommand command, CancellationToken cancellationToken = default)
     {
         var pageNumber = 1;
@@ -28,7 +17,7 @@ internal class SettledCommandService : ICommandService<SettledCommand>
         IEnumerable<GameWagerInfo> infos;
         do
         {
-            infos = await _client
+            infos = await client
                 .GameWagerSettledAsync(
                 apiUrl: command.ApiUrl,
                 website: command.Website,
@@ -46,11 +35,11 @@ internal class SettledCommandService : ICommandService<SettledCommand>
 
             foreach (var info in infos)
             {
-                _logger.LogDebug("LogOn:{logOn} Message: GameWager. GameWager:{info}", DateTime.Now.ToString("o"), info);
+                logger.LogDebug("LogOn:{logOn} Message: GameWager. GameWager:{info}", DateTime.Now.ToString("o"), info);
 
                 try
                 {
-                    await _service
+                    await service
                         .ExecuteAsync(
                             command: new(info),
                             cancellationToken: cancellationToken)
@@ -58,7 +47,7 @@ internal class SettledCommandService : ICommandService<SettledCommand>
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "LogOn:{logOn} Message: GameWager Exception. GameWager:{info}", DateTime.Now.ToString("o"), info);
+                    logger.LogError(ex, "LogOn:{logOn} Message: GameWager Exception. GameWager:{info}", DateTime.Now.ToString("o"), info);
                 }
             }
         } while (infos.Any());

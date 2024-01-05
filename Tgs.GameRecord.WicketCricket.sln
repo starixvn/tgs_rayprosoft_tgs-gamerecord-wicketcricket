@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tgs.GameRecord.WicketCricke
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tgs.GameRecord.WicketCricket.Core.UnitTest", "Tgs.GameRecord.WicketCricket.Core.UnitTest\Tgs.GameRecord.WicketCricket.Core.UnitTest.csproj", "{160BC1AC-F8C1-4BC5-BF42-27719B9CBB92}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tgs.GameRecord.WicketCricket.Common", "Tgs.GameRecord.WicketCricket.Common\Tgs.GameRecord.WicketCricket.Common.csproj", "{B6ABB4F3-677B-4968-B7C3-1488D440D24E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{160BC1AC-F8C1-4BC5-BF42-27719B9CBB92}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{160BC1AC-F8C1-4BC5-BF42-27719B9CBB92}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{160BC1AC-F8C1-4BC5-BF42-27719B9CBB92}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6ABB4F3-677B-4968-B7C3-1488D440D24E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6ABB4F3-677B-4968-B7C3-1488D440D24E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6ABB4F3-677B-4968-B7C3-1488D440D24E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6ABB4F3-677B-4968-B7C3-1488D440D24E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
