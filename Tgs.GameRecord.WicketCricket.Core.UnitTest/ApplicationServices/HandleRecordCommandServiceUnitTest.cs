@@ -1,20 +1,21 @@
 ﻿using System.Text.Json.Nodes;
 using Google.Protobuf.WellKnownTypes;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Tgs.GameInterface.WicketCricket.Protos;
-using Tgs.GameRecord.Handle.Client;
-using Tgs.GameRecord.Handle.Common.Protos;
 using Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
+using Valhalla.MessageQueue;
 
 namespace Tgs.GameRecord.WicketCricket.Core.UnitTest.ApplicationServices;
 
 public class HandleRecordCommandServiceUnitTest
 {
     [Fact]
-    public async void Loss()
+    public async Task Loss()
     {
-        var gameRecordInfo = Options.Create(new GameRecordInfoOptions
+		var faceLogger = NullLogger<HandleRecordCommandService>.Instance;
+		var gameRecordInfo = Options.Create(new GameRecordInfoOptions
         {
             GameProviderCode = "9WCRICKET",
             GameExternalId = "sports_book",
@@ -25,9 +26,9 @@ public class HandleRecordCommandServiceUnitTest
             IntervalMinutesMax = 1440d,
             IntervalMinutesMinimum = 1d
         });
-        var fakeClient = Substitute.For<IGameRecordHandleClient>();
+		var fakeMessageSender = Substitute.For<IMessageSender>();
 
-        var command = new HandleRecordCommand(
+		var command = new HandleRecordCommand(
             new GameWagerInfo
             {
                 ExternalRoundId = "-10020446",
@@ -46,57 +47,65 @@ public class HandleRecordCommandServiceUnitTest
                 AdditionalData = "{\"betPlaced\":\"2023-09-27T09:37:00.176\\u002B08:00\",\"matchSettledDate\":\"2023-09-27T10:11:07.331\\u002B08:00\",\"marketSettledDate\":\"2023-09-27T10:11:07.332\\u002B08:00\",\"eventTypeName\":\"CRICKET\",\"eventName\":\"AutoFancyBookMakerResettle v 09-27 09\",\"eventId\":-10020446,\"site\":44,\"currencyType\":2,\"eventType\":4,\"selectionId\":-1,\"categoryType\":2,\"ip\":\"114.33.41.237\",\"isp\":\"Chunghwa Telecom Co. Ltd.\",\"matchOddsReq\":100.00,\"betId\":96935586,\"userId\":\"4ue0ujotpmuu\",\"extension1\":null,\"agentId\":\"testpginrma\",\"oddsType\":1,\"updateDate\":1695780804242,\"marketName\":\"FANCY_BET\",\"selectionName\":\"first inning 10 over runs\",\"matchType\":\"No\",\"marketId\":\"46514\",\"fancyBetRuns\":10,\"fancyBetExtendedRuns\":0,\"fancyBetMarketType\":1,\"transactionData\":[{\"betTaken\":\"2023-09-27T09:37:00.176\\u002B08:00\",\"txStake\":1000.000000,\"txLiability\":-1000.0000000000000000,\"txOddsMatched\":100.00,\"actualOdds\":100.00,\"txFancyBetRuns\":10}],\"matchAvgOdds\":100.00,\"betStatus\":\"Settled\",\"profitLoss\":-1000.000000,\"reduction\":0,\"matchStake\":1000.000000}"
             });
 
-        var service = new HandleRecordCommandService(
-            gameRecordInfo,
-            fakeClient);
+        var sut = new HandleRecordCommandService(
+			faceLogger,
+			gameRecordInfo,
+			fakeMessageSender);
 
-        await service.ExecuteAsync(command);
+        await sut.ExecuteAsync(command);
 
-        await fakeClient
-            .Received(1)
-            .MessageAsync(
-            gameProviderCode: Arg.Is(gameRecordInfo.Value.GameProviderCode),
-            playerCode: Arg.Is(command.Info.PlayerCode),
-            wagerState: Arg.Is(WagerStates.Lose),
-            wagerType: Arg.Is(WagerTypes.Normal),
-            freeGameState: Arg.Is(FreeGameStates.None),
-            gambleState: Arg.Is(GambleStates.None),
-            cashoutState: Arg.Is(CashoutStates.None),
-            resettleState: Arg.Is(ResettleStates.None),
-            externalRoundId: Arg.Is(command.Info.ExternalRoundId),
-            externalWagerId: Arg.Is(command.Info.ExternalWagerId),
-            externalGameId: Arg.Is(gameRecordInfo.Value.GameExternalId),
-            externalCreatedOn: Arg.Is(command.Info.ExternalCreatedOn.ToDateTimeOffset()),
-            externalClosedOn: Arg.Is(command.Info.ExternalClosedOn.ToDateTimeOffset()),
-            externalPayoffOn: Arg.Is(command.Info.ExternalClosedOn.ToDateTimeOffset()),
-            externalResettleOn: Arg.Is(DateTimeOffset.UnixEpoch),
-            bet: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            validBet: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            settle: Arg.Is(command.Info.Settle.ToDecimal().GetValueOrDefault(0)),
-            commission: Arg.Is(0.0m),
-            turnover: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            winLoss: Arg.Is(command.Info.WinLoss.ToDecimal().GetValueOrDefault(0)),
-            additionalData: Arg.Any<JsonNode>(),
-            cancellationToken: Arg.Any<CancellationToken>());
-    }
+		_ = fakeMessageSender
+			.Received(1)
+			.PublishAsync(
+			subject: Arg.Is(Handle.Common.GameRecordHandleNatsConst.GameRecordHandleRequest),
+			data: Arg.Is(new Handle.Common.Protos.GameRecordHandleRequest
+			{
+				GameProviderCode = gameRecordInfo.Value.GameProviderCode,
+				PlayerCode = command.Info.PlayerCode,
+				ExternalRoundId = command.Info.ExternalWagerId,
+				ExternalBetId = command.Info.ExternalWagerId,
+				ExternalGameId = gameRecordInfo.Value.GameExternalId,
+				ExternalCreatedOn = command.Info.ExternalCreatedOn,
+				ExternalClosedOn = command.Info.ExternalClosedOn,
+				ExternalPayoffOn = command.Info.ExternalClosedOn,
+				ExternalResettleOn = DateTimeOffset.UnixEpoch.ToTimestamp(),
+				BetState = Handle.Common.Protos.BetState.Loss,
+				BetType = Handle.Common.Protos.BetType.Normal,
+				FreeGameState = Handle.Common.Protos.FreeGameState.None,
+				GambleState = Handle.Common.Protos.GambleState.None,
+				CashoutState = Handle.Common.Protos.CashoutState.None,
+				ResettleState = Handle.Common.Protos.ResettleState.None,
+				JackpotState = Handle.Common.Protos.JackpotState.None,
+				Bet = command.Info.Bet.ToDecimal().GetValueOrDefault(0),
+				ValidBet = command.Info.Bet.ToDecimal().GetValueOrDefault(0),
+				Settle = command.Info.Settle.ToDecimal().GetValueOrDefault(0),
+				Commission = 0.0m,
+				Turnover = command.Info.Bet.ToDecimal().GetValueOrDefault(0),
+				WinLoss = command.Info.WinLoss.ToDecimal().GetValueOrDefault(0),
+				Jackpot = 0.0M,
+				AdditionalData = command.Info.AdditionalData
+			}),
+			cancellationToken: Arg.Any<CancellationToken>());
+	}
 
     [Fact]
-    public async void Running()
+    public async Task Running()
     {
-        var gameRecordInfo = Options.Create(new GameRecordInfoOptions
-        {
-            GameProviderCode = "9WCRICKET",
-            GameExternalId = "sports_book",
-            GameProviderConfiguration = "9WCRICKETConfiguration",
-            HangfirePrefix = "gamerecord-wicketCricket-hangfire:",
-            HangfireLocking = "gamerecord-wicketCricket-locking:",
-            IntervalMinutes = 30d,
-            IntervalMinutesMax = 1440d,
-            IntervalMinutesMinimum = 1d
-        });
-        var fakeClient = Substitute.For<IGameRecordHandleClient>();
+		var faceLogger = NullLogger<HandleRecordCommandService>.Instance;
+		var gameRecordInfo = Options.Create(new GameRecordInfoOptions
+		{
+			GameProviderCode = "9WCRICKET",
+			GameExternalId = "sports_book",
+			GameProviderConfiguration = "9WCRICKETConfiguration",
+			HangfirePrefix = "gamerecord-wicketCricket-hangfire:",
+			HangfireLocking = "gamerecord-wicketCricket-locking:",
+			IntervalMinutes = 30d,
+			IntervalMinutesMax = 1440d,
+			IntervalMinutesMinimum = 1d
+		});
+		var fakeMessageSender = Substitute.For<IMessageSender>();
 
-        var command = new HandleRecordCommand(
+		var command = new HandleRecordCommand(
             new GameWagerInfo
             {
                 ExternalRoundId = "-10020457",
@@ -114,57 +123,65 @@ public class HandleRecordCommandServiceUnitTest
                 AdditionalData = "{\"eventTypeName\":\"CRICKET\",\"eventName\":\"\",\"eventId\":30465936,\"site\":44,\"currencyType\":2,\"eventType\":4,\"selectionId\":-1,\"categoryType\":2,\"ip\":\"103.55.10.179\",\"isp\":\"Ivacy Limited\",\"matchOddsReq\":100.00,\"betId\":91407284,\"userId\":\"4ue0ujotpmuu\",\"extension1\":null,\"agentId\":\"testwg681ma\",\"oddsType\":1,\"updateDate\":1620012031779,\"betPlaced\":\"2023-09-27T11:35:53.213u002B08:00\",\"matchSettledDate\":\"\",\"marketName\":\"FANCY_BET\",\"selectionName\":\"first inning 15 over runs\",\"matchType\":\"Yes\",\"marketId\":\"26001\",\"fancyBetRuns\":88,\"fancyBetExtendedRuns\":0,\"fancyBetMarketType\":1,\"transactionData\":null,\"matchAvgOdds\":100.00,\"betStatus\":\"Not Settled\",\"matchAmount\":1000.000000,\"unMatchAmount\":0,\"dateMatched\":\"2023-09-27T11:35:53.213u002B08:00\"}"
             });
 
-        var service = new HandleRecordCommandService(
-            gameRecordInfo,
-            fakeClient);
+		var sut = new HandleRecordCommandService(
+			faceLogger,
+			gameRecordInfo,
+			fakeMessageSender);
 
-        await service.ExecuteAsync(command);
+		await sut.ExecuteAsync(command);
 
-        await fakeClient
-            .Received(1)
-            .MessageAsync(
-            gameProviderCode: Arg.Is(gameRecordInfo.Value.GameProviderCode),
-            playerCode: Arg.Is(command.Info.PlayerCode),
-            wagerState: Arg.Is(WagerStates.Running),
-            wagerType: Arg.Is(WagerTypes.Normal),
-            freeGameState: Arg.Is(FreeGameStates.None),
-            gambleState: Arg.Is(GambleStates.None),
-            cashoutState: Arg.Is(CashoutStates.None),
-            resettleState: Arg.Is(ResettleStates.None),
-            externalRoundId: Arg.Is(command.Info.ExternalRoundId),
-            externalWagerId: Arg.Is(command.Info.ExternalWagerId),
-            externalGameId: Arg.Is(gameRecordInfo.Value.GameExternalId),
-            externalCreatedOn: Arg.Is(command.Info.ExternalCreatedOn.ToDateTimeOffset()),
-            externalClosedOn: Arg.Is(DateTimeOffset.UnixEpoch),
-            externalPayoffOn: Arg.Is(DateTimeOffset.UnixEpoch),
-            externalResettleOn: Arg.Is(DateTimeOffset.UnixEpoch),
-            bet: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            validBet: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            settle: Arg.Is(0.0m),
-            commission: Arg.Is(0.0m),
-            turnover: Arg.Is(0.0m),
-            winLoss: Arg.Is(0.0m),
-            additionalData: Arg.Any<JsonNode>(),
-            cancellationToken: Arg.Any<CancellationToken>());
-    }
+		_ = fakeMessageSender
+			.Received(1)
+			.PublishAsync(
+			subject: Arg.Is(Handle.Common.GameRecordHandleNatsConst.GameRecordHandleRequest),
+			data: Arg.Is(new Handle.Common.Protos.GameRecordHandleRequest
+			{
+				GameProviderCode = gameRecordInfo.Value.GameProviderCode,
+				PlayerCode = command.Info.PlayerCode,
+				ExternalRoundId = command.Info.ExternalWagerId,
+				ExternalBetId = command.Info.ExternalWagerId,
+				ExternalGameId = gameRecordInfo.Value.GameExternalId,
+				ExternalCreatedOn = command.Info.ExternalCreatedOn,
+				ExternalClosedOn = DateTimeOffset.UnixEpoch.ToTimestamp(),
+				ExternalPayoffOn = DateTimeOffset.UnixEpoch.ToTimestamp(),
+				ExternalResettleOn = DateTimeOffset.UnixEpoch.ToTimestamp(),
+				BetState = Handle.Common.Protos.BetState.Running,
+				BetType = Handle.Common.Protos.BetType.Normal,
+				FreeGameState = Handle.Common.Protos.FreeGameState.None,
+				GambleState = Handle.Common.Protos.GambleState.None,
+				CashoutState = Handle.Common.Protos.CashoutState.None,
+				ResettleState = Handle.Common.Protos.ResettleState.None,
+				JackpotState = Handle.Common.Protos.JackpotState.None,
+				Bet = command.Info.Bet.ToDecimal().GetValueOrDefault(0),
+				ValidBet = command.Info.Bet.ToDecimal().GetValueOrDefault(0),
+				Settle = 0.0m,
+				Commission = 0.0m,
+				Turnover = 0.0m,
+				WinLoss = 0.0m,
+				Jackpot = 0.0M,
+				AdditionalData = command.Info.AdditionalData
+			}),
+			cancellationToken: Arg.Any<CancellationToken>());
+	}
 
     [Fact]
-    public async void Void()
+    public async Task Void()
     {
-        var gameRecordInfo = Options.Create(new GameRecordInfoOptions
-        {
-            GameProviderCode = "9WCRICKET",
-            GameExternalId = "sports_book",
-            GameProviderConfiguration = "9WCRICKETConfiguration",
-            HangfirePrefix = "gamerecord-wicketCricket-hangfire:",
-            HangfireLocking = "gamerecord-wicketCricket-locking:",
-            IntervalMinutes = 30d,
-            IntervalMinutesMax = 1440d,
-            IntervalMinutesMinimum = 1d
-        });
-        var fakeClient = Substitute.For<IGameRecordHandleClient>();
+		var faceLogger = NullLogger<HandleRecordCommandService>.Instance;
+		var gameRecordInfo = Options.Create(new GameRecordInfoOptions
+		{
+			GameProviderCode = "9WCRICKET",
+			GameExternalId = "sports_book",
+			GameProviderConfiguration = "9WCRICKETConfiguration",
+			HangfirePrefix = "gamerecord-wicketCricket-hangfire:",
+			HangfireLocking = "gamerecord-wicketCricket-locking:",
+			IntervalMinutes = 30d,
+			IntervalMinutesMax = 1440d,
+			IntervalMinutesMinimum = 1d
+		});
+		var fakeMessageSender = Substitute.For<IMessageSender>();
 
-        var command = new HandleRecordCommand(
+		var command = new HandleRecordCommand(
             new GameWagerInfo
             {
                 ExternalRoundId = "-10020452",
@@ -182,57 +199,65 @@ public class HandleRecordCommandServiceUnitTest
                 AdditionalData = "{\"betPlaced\":\"2023-09-27T09:36:13.017\\u002B08:00\",\"matchSettledDate\":\"2023-09-27T10:20:52.302\\u002B08:00\",\"marketSettledDate\":\"2023-09-27T10:20:52.303\\u002B08:00\",\"eventTypeName\":\"CRICKET\",\"eventName\":\"AutoFancyBookMakerVoid v 09-27 09\",\"eventId\":-10020452,\"site\":44,\"currencyType\":2,\"eventType\":4,\"selectionId\":-1,\"categoryType\":2,\"ip\":\"114.33.41.237\",\"isp\":\"Chunghwa Telecom Co. Ltd.\",\"matchOddsReq\":100.00,\"betId\":96935585,\"userId\":\"4ue0ujotpmuu\",\"extension1\":null,\"agentId\":\"testpginrma\",\"oddsType\":1,\"updateDate\":1695781368979,\"marketName\":\"FANCY_BET\",\"selectionName\":\"first inning 10 over runs\",\"matchType\":\"No\",\"marketId\":\"46515\",\"fancyBetRuns\":10,\"fancyBetExtendedRuns\":0,\"fancyBetMarketType\":1,\"transactionData\":[],\"matchAvgOdds\":0,\"betStatus\":\"Voided\",\"profitLoss\":0,\"reduction\":0,\"matchStake\":1000.000000}"
             });
 
-        var service = new HandleRecordCommandService(
-            gameRecordInfo,
-            fakeClient);
+		var sut = new HandleRecordCommandService(
+			faceLogger,
+			gameRecordInfo,
+			fakeMessageSender);
 
-        await service.ExecuteAsync(command);
+		await sut.ExecuteAsync(command);
 
-        await fakeClient
-            .Received(1)
-            .MessageAsync(
-            gameProviderCode: Arg.Is(gameRecordInfo.Value.GameProviderCode),
-            playerCode: Arg.Is(command.Info.PlayerCode),
-            wagerState: Arg.Is(WagerStates.Void),
-            wagerType: Arg.Is(WagerTypes.Normal),
-            freeGameState: Arg.Is(FreeGameStates.None),
-            gambleState: Arg.Is(GambleStates.None),
-            cashoutState: Arg.Is(CashoutStates.None),
-            resettleState: Arg.Is(ResettleStates.None),
-            externalRoundId: Arg.Is(command.Info.ExternalRoundId),
-            externalWagerId: Arg.Is(command.Info.ExternalWagerId),
-            externalGameId: Arg.Is(gameRecordInfo.Value.GameExternalId),
-            externalCreatedOn: Arg.Is(command.Info.ExternalCreatedOn.ToDateTimeOffset()),
-            externalClosedOn: Arg.Is(command.Info.ExternalClosedOn.ToDateTimeOffset()),
-            externalPayoffOn: Arg.Is(command.Info.ExternalClosedOn.ToDateTimeOffset()),
-            externalResettleOn: Arg.Is(DateTimeOffset.UnixEpoch),
-            bet: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            validBet: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            settle: Arg.Is(0.0m),
-            commission: Arg.Is(0.0m),
-            turnover: Arg.Is(0.0m),
-            winLoss: Arg.Is(0.0m),
-            additionalData: Arg.Any<JsonNode>(),
-            cancellationToken: Arg.Any<CancellationToken>());
-    }
+		_ = fakeMessageSender
+			.Received(1)
+			.PublishAsync(
+			subject: Arg.Is(Handle.Common.GameRecordHandleNatsConst.GameRecordHandleRequest),
+			data: Arg.Is(new Handle.Common.Protos.GameRecordHandleRequest
+			{
+				GameProviderCode = gameRecordInfo.Value.GameProviderCode,
+				PlayerCode = command.Info.PlayerCode,
+				ExternalRoundId = command.Info.ExternalWagerId,
+				ExternalBetId = command.Info.ExternalWagerId,
+				ExternalGameId = gameRecordInfo.Value.GameExternalId,
+				ExternalCreatedOn = command.Info.ExternalCreatedOn,
+				ExternalClosedOn = command.Info.ExternalClosedOn,
+				ExternalPayoffOn = command.Info.ExternalClosedOn,
+				ExternalResettleOn = DateTimeOffset.UnixEpoch.ToTimestamp(),
+				BetState = Handle.Common.Protos.BetState.Void,
+				BetType = Handle.Common.Protos.BetType.Normal,
+				FreeGameState = Handle.Common.Protos.FreeGameState.None,
+				GambleState = Handle.Common.Protos.GambleState.None,
+				CashoutState = Handle.Common.Protos.CashoutState.None,
+				ResettleState = Handle.Common.Protos.ResettleState.None,
+				JackpotState = Handle.Common.Protos.JackpotState.None,
+				Bet = command.Info.Bet.ToDecimal().GetValueOrDefault(0),
+				ValidBet = command.Info.Bet.ToDecimal().GetValueOrDefault(0),
+				Settle = 0.0M,
+				Commission = 0.0m,
+				Turnover = 0.0M,
+				WinLoss = 0.0M,
+				Jackpot = 0.0M,
+				AdditionalData = command.Info.AdditionalData
+			}),
+			cancellationToken: Arg.Any<CancellationToken>());
+	}
 
     [Fact]
-    public async void Win()
+    public async Task Win()
     {
-        var gameRecordInfo = Options.Create(new GameRecordInfoOptions
-        {
-            GameProviderCode = "9WCRICKET",
-            GameExternalId = "sports_book",
-            GameProviderConfiguration = "9WCRICKETConfiguration",
-            HangfirePrefix = "gamerecord-wicketCricket-hangfire:",
-            HangfireLocking = "gamerecord-wicketCricket-locking:",
-            IntervalMinutes = 30d,
-            IntervalMinutesMax = 1440d,
-            IntervalMinutesMinimum = 1d
-        });
-        var fakeClient = Substitute.For<IGameRecordHandleClient>();
+		var faceLogger = NullLogger<HandleRecordCommandService>.Instance;
+		var gameRecordInfo = Options.Create(new GameRecordInfoOptions
+		{
+			GameProviderCode = "9WCRICKET",
+			GameExternalId = "sports_book",
+			GameProviderConfiguration = "9WCRICKETConfiguration",
+			HangfirePrefix = "gamerecord-wicketCricket-hangfire:",
+			HangfireLocking = "gamerecord-wicketCricket-locking:",
+			IntervalMinutes = 30d,
+			IntervalMinutesMax = 1440d,
+			IntervalMinutesMinimum = 1d
+		});
+		var fakeMessageSender = Substitute.For<IMessageSender>();
 
-        var command = new HandleRecordCommand(
+		var command = new HandleRecordCommand(
             new GameWagerInfo
             {
                 ExternalRoundId = "-10020457",
@@ -250,37 +275,44 @@ public class HandleRecordCommandServiceUnitTest
                 AdditionalData = "{\"betPlaced\":\"2023-09-27T11:35:53.213\\u002B08:00\",\"matchSettledDate\":\"2023-09-27T12:00:52.132\\u002B08:00\",\"marketSettledDate\":\"2023-09-27T12:00:52.133\\u002B08:00\",\"eventTypeName\":\"CRICKET\",\"eventName\":\"AutoTestMarket v 09-27 11\",\"eventId\":-10020457,\"site\":44,\"currencyType\":2,\"eventType\":4,\"selectionId\":-1,\"categoryType\":2,\"ip\":\"114.33.41.237\",\"isp\":\"Chunghwa Telecom Co. Ltd.\",\"matchOddsReq\":100.00,\"betId\":96935587,\"userId\":\"4ue0ujotpmuu\",\"extension1\":null,\"agentId\":\"testpginrma\",\"oddsType\":1,\"updateDate\":1695787252242,\"marketName\":\"FANCY_BET\",\"selectionName\":\"first inning 10 over runs\",\"matchType\":\"No\",\"marketId\":\"46519\",\"fancyBetRuns\":10,\"fancyBetExtendedRuns\":0,\"fancyBetMarketType\":1,\"transactionData\":[{\"betTaken\":\"2023-09-27T11:35:53.213\\u002B08:00\",\"txStake\":1000.000000,\"txLiability\":-1000.0000000000000000,\"txOddsMatched\":100.00,\"actualOdds\":100.00,\"txFancyBetRuns\":10}],\"matchAvgOdds\":100.00,\"betStatus\":\"Settled\",\"profitLoss\":1000.000000,\"reduction\":0,\"matchStake\":1000.000000}"
             });
 
-        var service = new HandleRecordCommandService(
-            gameRecordInfo,
-            fakeClient);
+		var sut = new HandleRecordCommandService(
+			faceLogger,
+			gameRecordInfo,
+			fakeMessageSender);
 
-        await service.ExecuteAsync(command);
+		await sut.ExecuteAsync(command);
 
-        await fakeClient
-            .Received(1)
-            .MessageAsync(
-            gameProviderCode: Arg.Is(gameRecordInfo.Value.GameProviderCode),
-            playerCode: Arg.Is(command.Info.PlayerCode),
-            wagerState: Arg.Is(WagerStates.Win),
-            wagerType: Arg.Is(WagerTypes.Normal),
-            freeGameState: Arg.Is(FreeGameStates.None),
-            gambleState: Arg.Is(GambleStates.None),
-            cashoutState: Arg.Is(CashoutStates.None),
-            resettleState: Arg.Is(ResettleStates.None),
-            externalRoundId: Arg.Is(command.Info.ExternalRoundId),
-            externalWagerId: Arg.Is(command.Info.ExternalWagerId),
-            externalGameId: Arg.Is(gameRecordInfo.Value.GameExternalId),
-            externalCreatedOn: Arg.Is(command.Info.ExternalCreatedOn.ToDateTimeOffset()),
-            externalClosedOn: Arg.Is(command.Info.ExternalClosedOn.ToDateTimeOffset()),
-            externalPayoffOn: Arg.Is(command.Info.ExternalClosedOn.ToDateTimeOffset()),
-            externalResettleOn: Arg.Is(DateTimeOffset.UnixEpoch),
-            bet: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            validBet: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            settle: Arg.Is(command.Info.Settle.ToDecimal().GetValueOrDefault(0)),
-            commission: Arg.Is(0.0m),
-            turnover: Arg.Is(command.Info.Bet.ToDecimal().GetValueOrDefault(0)),
-            winLoss: Arg.Is(command.Info.WinLoss.ToDecimal().GetValueOrDefault(0)),
-            additionalData: Arg.Any<JsonNode>(),
-            cancellationToken: Arg.Any<CancellationToken>());
-    }
+		_ = fakeMessageSender
+			.Received(1)
+			.PublishAsync(
+			subject: Arg.Is(Handle.Common.GameRecordHandleNatsConst.GameRecordHandleRequest),
+			data: Arg.Is(new Handle.Common.Protos.GameRecordHandleRequest
+			{
+				GameProviderCode = gameRecordInfo.Value.GameProviderCode,
+				PlayerCode = command.Info.PlayerCode,
+				ExternalRoundId = command.Info.ExternalWagerId,
+				ExternalBetId = command.Info.ExternalWagerId,
+				ExternalGameId = gameRecordInfo.Value.GameExternalId,
+				ExternalCreatedOn = command.Info.ExternalCreatedOn,
+				ExternalClosedOn = command.Info.ExternalClosedOn,
+				ExternalPayoffOn = command.Info.ExternalClosedOn,
+				ExternalResettleOn = DateTimeOffset.UnixEpoch.ToTimestamp(),
+				BetState = Handle.Common.Protos.BetState.Win,
+				BetType = Handle.Common.Protos.BetType.Normal,
+				FreeGameState = Handle.Common.Protos.FreeGameState.None,
+				GambleState = Handle.Common.Protos.GambleState.None,
+				CashoutState = Handle.Common.Protos.CashoutState.None,
+				ResettleState = Handle.Common.Protos.ResettleState.None,
+				JackpotState = Handle.Common.Protos.JackpotState.None,
+				Bet = 1000m,
+				ValidBet = 1000m,
+				Settle = 2000m,
+				Commission = 0.0m,
+				Turnover = 1000m,
+				WinLoss = 1000m,
+				Jackpot = 0.0M,
+				AdditionalData = command.Info.AdditionalData
+			}),
+			cancellationToken: Arg.Any<CancellationToken>());
+	}
 }

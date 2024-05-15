@@ -10,7 +10,8 @@ data:
       "Logging": {
         "LogLevel": {
           "Default": "Warning",
-          "Tgs.GameRecord.WicketCricket.Messages": "Information"
+          "Tgs.GameRecord.WicketCricket.Messages": "Information",
+          "Tgs.GameRecord.WicketCricket.Core.ApplicationServices.HandleRecordCommandService": "Information"
         }
       },
       "GameRecord": {
