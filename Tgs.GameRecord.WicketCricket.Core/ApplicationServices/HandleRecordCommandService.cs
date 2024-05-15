@@ -1,69 +1,92 @@
-﻿using System.Text.Json.Nodes;
+﻿using Google.Protobuf.WellKnownTypes;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Tgs.GameRecord.Handle.Client;
-using Tgs.GameRecord.Handle.Common.Protos;
 using Tgs.ServiceUtility;
+using Valhalla.MessageQueue;
 
 namespace Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
 
 internal class HandleRecordCommandService(
-    IOptions<GameRecordInfoOptions> options,
-    IGameRecordHandleClient client) : ICommandService<HandleRecordCommand>
+	ILogger<HandleRecordCommandService> logger,
+	IOptions<GameRecordInfoOptions> options,
+	IMessageSender messageSender) : ICommandService<HandleRecordCommand>
 {
-    private readonly GameRecordInfoOptions _gameRecordInfo = options.Value;
+	private readonly GameRecordInfoOptions _gameRecordInfo = options.Value;
 
-    public ValueTask ExecuteAsync(HandleRecordCommand command, CancellationToken cancellationToken = default)
-    {
-        var externalCreatedOn = command.Info.ExternalCreatedOn.ToDateTimeOffset();
-        var wagerState = WagerStates.Running;
-        var externalClosedOn = DateTimeOffset.UnixEpoch;
-        var bet = command.Info.Bet.ToDecimal().GetValueOrDefault(0);
-        var settle = 0.0m;
-        var commission = 0.0m;
-        var turnover = 0.0m;
-        var winLoss = 0.0m;
-        if (command.Info.IsClosed)
-        {
-            externalClosedOn = command.Info.ExternalClosedOn.ToDateTimeOffset();
-            wagerState = command.Info.IsVoided
-                ? WagerStates.Void
-                : command.Info.IsCancelled
-                ? WagerStates.Refund
-                : command.Info.WinLoss.ToDecimal().GetValueOrDefault(0) > 0
-                ? WagerStates.Win
-                : WagerStates.Lose;
-            if (wagerState is WagerStates.Win or WagerStates.Lose)
-            {
-                turnover = command.Info.Bet.ToDecimal().GetValueOrDefault(0);
-                settle = command.Info.Settle.ToDecimal().GetValueOrDefault(0);
-                winLoss = command.Info.WinLoss.ToDecimal().GetValueOrDefault(0);
-            }
-        }
+	public async ValueTask ExecuteAsync(HandleRecordCommand command, CancellationToken cancellationToken = default)
+	{
+		var externalCreatedOn = command.Info.ExternalCreatedOn.ToDateTimeOffset();
+		var betState = Handle.Common.Protos.BetState.Running;
+		var externalClosedOn = DateTimeOffset.UnixEpoch;
+		var bet = command.Info.Bet.ToDecimal().GetValueOrDefault(0);
+		var settle = 0.0m;
+		var turnover = 0.0m;
+		var winLoss = 0.0m;
+		if (command.Info.IsClosed)
+		{
+			externalClosedOn = command.Info.ExternalClosedOn.ToDateTimeOffset();
+			betState = command.Info.IsVoided
+				? Handle.Common.Protos.BetState.Void
+				: command.Info.IsCancelled
+				? Handle.Common.Protos.BetState.Refund
+				: command.Info.WinLoss.ToDecimal().GetValueOrDefault(0) > 0
+				? Handle.Common.Protos.BetState.Win
+				: Handle.Common.Protos.BetState.Loss;
+			if (betState is Handle.Common.Protos.BetState.Win or Handle.Common.Protos.BetState.Loss)
+			{
+				turnover = command.Info.Bet.ToDecimal().GetValueOrDefault(0);
+				settle = command.Info.Settle.ToDecimal().GetValueOrDefault(0);
+				winLoss = command.Info.WinLoss.ToDecimal().GetValueOrDefault(0);
+			}
+		}
 
-        return client
-            .MessageAsync(
-            gameProviderCode: _gameRecordInfo.GameProviderCode,
-            playerCode: command.Info.PlayerCode,
-            wagerState: wagerState,
-            wagerType: WagerTypes.Normal,
-            freeGameState: FreeGameStates.None,
-            gambleState: GambleStates.None,
-            cashoutState: CashoutStates.None,
-            resettleState: ResettleStates.None,
-            externalRoundId: command.Info.ExternalRoundId,
-            externalWagerId: command.Info.ExternalWagerId,
-            externalGameId: _gameRecordInfo.GameExternalId,
-            externalCreatedOn: externalCreatedOn,
-            externalClosedOn: externalClosedOn,
-            externalPayoffOn: externalClosedOn,
-            externalResettleOn: DateTimeOffset.UnixEpoch,
-            bet: bet,
-            validBet: bet,
-            settle: settle,
-            commission: commission,
-            turnover: turnover,
-            winLoss: winLoss,
-            additionalData:JsonNode.Parse( command.Info.AdditionalData)!,
-            cancellationToken: cancellationToken);
-    }
+		var request = new Handle.Common.Protos.GameRecordHandleRequest
+		{
+			GameProviderCode = _gameRecordInfo.GameProviderCode,
+			PlayerCode = command.Info.PlayerCode,
+			ExternalRoundId = command.Info.ExternalWagerId,
+			ExternalBetId = command.Info.ExternalWagerId,
+			ExternalGameId = _gameRecordInfo.GameExternalId,
+			ExternalCreatedOn = externalCreatedOn.ToTimestamp(),
+			ExternalClosedOn = externalClosedOn.ToTimestamp(),
+			ExternalPayoffOn = externalClosedOn.ToTimestamp(),
+			ExternalResettleOn = DateTimeOffset.UnixEpoch.ToTimestamp(),
+			BetState = betState,
+			BetType = Handle.Common.Protos.BetType.Normal,
+			FreeGameState = Handle.Common.Protos.FreeGameState.None,
+			GambleState = Handle.Common.Protos.GambleState.None,
+			CashoutState = Handle.Common.Protos.CashoutState.None,
+			ResettleState = Handle.Common.Protos.ResettleState.None,
+			JackpotState = Handle.Common.Protos.JackpotState.None,
+			Bet = bet,
+			ValidBet = bet,
+			Settle = settle,
+			Commission = 0.0m,
+			Turnover = turnover,
+			WinLoss = winLoss,
+			Jackpot = 0.0M,
+			AdditionalData = command.Info.AdditionalData
+		};
+
+		await messageSender.PublishAsync(
+			subject: Handle.Common.GameRecordHandleNatsConst.GameRecordHandleRequest,
+			data: request,
+			cancellationToken: cancellationToken)
+			.ConfigureAwait(false);
+
+		logger.LogInformation("LogOn:{logOn} Subject:{subject} Mesaage:This publication requests information.({request})",
+			DateTime.Now.ToString("o"),
+			Handle.Common.GameRecordHandleNatsConst.GameRecordHandleRequest,
+			new
+			{
+				request.GameProviderCode,
+				request.PlayerCode,
+				request.ExternalRoundId,
+				request.ExternalBetId,
+				request.ExternalGameId,
+				ExternalCreatedOn = request.ExternalCreatedOn.ToDateTimeOffset(),
+				ExternalClosedOn = request.ExternalClosedOn.ToDateTimeOffset(),
+				request.BetState
+			});
+	}
 }
