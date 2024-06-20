@@ -10,8 +10,9 @@ data:
       "Logging": {
         "LogLevel": {
           "Default": "Warning",
-          "Grpc.Net.Client.Balancer": "Debug",
-          "Tgs.GameRecord.WicketCricket.Messages.ManualMessageHandler": "Warning",
+          "Grpc.Net.Client.Balancer": "Warning",
+          "Grpc.Net.Client.Balancer.DnsResolver": "Debug",
+          "Tgs.GameRecord.WicketCricket.Messages.ManualMessageHandler": "Information",
           "Tgs.GameRecord.WicketCricket.Messages.ScheduleMessageHandler": "Warning",
           "Tgs.GameRecord.WicketCricket.Core.ApplicationServices.HandleRecordCommandService": "Warning"
         }
