@@ -8,8 +8,8 @@ using Valhalla.MessageQueue;
 namespace Tgs.GameRecord.WicketCricket.Messages;
 
 internal class ScheduleMessageHandler(
-    ILogger<ScheduleMessageHandler> logger,
-    ICommandService<PullRecordCommand> service) : IMessageHandler<ReadOnlyMemory<byte>>
+	ILogger<ScheduleMessageHandler> logger,
+	ICommandService<PullRecordCommand> service) : IMessageHandler<ReadOnlyMemory<byte>>
 {
 	public ValueTask HandleAsync(string subject, ReadOnlyMemory<byte> data, IEnumerable<MessageHeaderValue>? headerValues, CancellationToken cancellationToken = default)
 	{

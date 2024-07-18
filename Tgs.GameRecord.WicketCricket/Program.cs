@@ -64,7 +64,7 @@ builder.Services.AddHangfire(
 		};
 		_ = config
 		.UseRedisStorage(connectionString, options)
-		.WithJobExpirationTimeout(TimeSpan.FromMinutes(30));
+		.WithJobExpirationTimeout(TimeSpan.FromMinutes(15));
 	})
 	.AddHangfireServer();
 
@@ -146,10 +146,10 @@ app.UseHangfireDashboard(
 	"/hangfire",
 	new DashboardOptions()
 	{
-		Authorization = new[]
-		{
+		Authorization =
+		[
 			new IgnoreHangfireAuthorizationFilter()
-		}
+		]
 	});
 
 _ = app.UseAuthorization();

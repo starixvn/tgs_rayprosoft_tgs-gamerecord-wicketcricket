@@ -2,4 +2,4 @@
 
 namespace Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
 
-public record HandleRecordCommand(GameWagerInfo Info);
+public record HandleRecordCommand(GameRecordInfo Info);
