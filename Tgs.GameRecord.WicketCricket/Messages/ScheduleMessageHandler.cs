@@ -17,22 +17,33 @@ internal class ScheduleMessageHandler(
 		var message = JsonSerializer.Deserialize<WicketCricketGameRecordMessage>(json)
 			?? throw new NullReferenceException("The request data resolves to a null value");
 
-		logger.LogInformation("LogOn:{logOn} Subject:{subject} Information Request:{message}",
-			DateTime.Now.ToString("o"),
-			subject,
-			message);
-
-		var command = new PullRecordCommand(
-			ApiUrl: message.ApiUrl,
-			Website: message.Website,
-			Cert: message.Cert,
-			Agent: message.Agent,
-			StartTime: message.StartTime,
-			EndTime: message.EndTime,
-			ReportType: message.ReportType);
+		logger.LogInformation("{logInformation}",
+			JsonSerializer.Serialize(new
+			{
+				LogOn = DateTime.Now.ToString("u"),
+				Subject = subject,
+				Data = new
+				{
+					message.ApiUrl,
+					message.Website,
+					message.Cert,
+					message.Agent,
+					StartTime = message.StartTime.ToString("u"),
+					EndTime = message.EndTime.ToString("u"),
+					message.ReportType
+				},
+				Message = "This receive message handler."
+			}));
 
 		return service.ExecuteAsync(
-			command: command,
+			command: new PullRecordCommand(
+				ApiUrl: message.ApiUrl,
+				Website: message.Website,
+				Cert: message.Cert,
+				Agent: message.Agent,
+				StartTime: message.StartTime,
+				EndTime: message.EndTime,
+				ReportType: message.ReportType),
 			cancellationToken: cancellationToken);
 	}
 }
