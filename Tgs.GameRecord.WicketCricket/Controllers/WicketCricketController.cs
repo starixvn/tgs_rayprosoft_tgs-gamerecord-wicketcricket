@@ -16,20 +16,6 @@ public class WicketCricketController : ControllerBase
 	/// <param name="messageSender">The message sender.</param>
 	/// <param name="source">The source.</param>
 	/// <returns></returns>
-	/// <remarks>
-	/// <b>Example</b><br />
-	///
-	///     Post
-	///         {
-	///             "apiUrl": "https://apiinfo.cckk77.net/",
-	///             "website": "WICKETSPRO",
-	///             "cert": "wkVwQ8sMVr252EA9",
-	///             "agent": "testpginrma",
-	///             "startTime": "2023-09-27T00:00:00+08:00",
-	///             "endTime": "2023-09-28T00:00:00+08:00",
-	///             "reportType": "FancyBet"
-	///         }
-	/// </remarks>
 	[HttpPost("manual")]
 	public ValueTask GameRecordManualAsync(
 		[FromServices] IMessageSender messageSender,
@@ -45,20 +31,6 @@ public class WicketCricketController : ControllerBase
 	/// <param name="messageSender">The message sender.</param>
 	/// <param name="source">The source.</param>
 	/// <returns></returns>
-	/// <remarks>
-	/// <b>Example</b><br />
-	///
-	///     Post
-	///         {
-	///             "apiUrl": "https://apiinfo.cckk77.net/",
-	///             "website": "WICKETSPRO",
-	///             "cert": "wkVwQ8sMVr252EA9",
-	///             "agent": "testpginrma",
-	///             "startTime": "2023-09-27T00:00:00+08:00",
-	///             "endTime": "2023-09-28T00:00:00+08:00",
-	///             "reportType": "FancyBet"
-	///         }
-	/// </remarks>
 	[HttpPost("schedule")]
 	public ValueTask GameRecordScheduleAsync(
 		[FromServices] IMessageSender messageSender,
