@@ -3,7 +3,6 @@ using System.Text.Json;
 using Tgs.GameRecord.WicketCricket.Common;
 using Tgs.GameRecord.WicketCricket.Core;
 using Tgs.GameRecord.WicketCricket.Core.ApplicationServices;
-using Tgs.ServiceUtility;
 using Valhalla.MessageQueue;
 
 namespace Tgs.GameRecord.WicketCricket.Messages;
