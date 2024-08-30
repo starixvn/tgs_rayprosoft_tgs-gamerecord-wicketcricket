@@ -22,7 +22,7 @@ public class WicketCricketController : ControllerBase
 		WicketCricketGameRecordMessage source)
 		=> messageSender.PublishAsync(
 			subject: WicketCricketNatsConst.ManualPublish,
-			data: Encoding.UTF8.GetBytes(JsonSerializer.Serialize(source)),
+			data: JsonSerializer.SerializeToUtf8Bytes(source),
 			cancellationToken: HttpContext.RequestAborted);
 
 	/// <summary>
@@ -37,6 +37,6 @@ public class WicketCricketController : ControllerBase
 		WicketCricketGameRecordMessage source)
 		=> messageSender.PublishAsync(
 			subject: WicketCricketNatsConst.SchedulePublish,
-			data: Encoding.UTF8.GetBytes(JsonSerializer.Serialize(source)),
+			data: JsonSerializer.SerializeToUtf8Bytes(source),
 			cancellationToken: HttpContext.RequestAborted);
 }
