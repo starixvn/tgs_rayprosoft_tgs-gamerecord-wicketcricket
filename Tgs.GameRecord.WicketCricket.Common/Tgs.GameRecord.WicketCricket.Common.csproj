@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Tgs.GameInterface.WicketCricket.Client" Version="1.0.4" />
+    <PackageReference Include="Tgs.GameInterface.WicketCricket.Client" Version="8.0.1" />
   </ItemGroup>
 
 </Project>
